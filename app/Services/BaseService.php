@@ -8,11 +8,11 @@ use App\Models\BaseModel;
 use App\Validation\BaseValidator;
 use App\Exceptions\ServiceException;
 use App\Exceptions\ValidationException;
-use App\Config\AppConstants;
+use Config\AppConstants;
 
 abstract class BaseService
 {
-    /** @var string Wajib di-set di child class */
+    /** @var string Must be set in the child class to bind a Model. */
     protected string $modelClass;
     
     protected ?BaseModel $model = null;
@@ -28,10 +28,10 @@ abstract class BaseService
 
     public function findAll(array $filters = [], int $perPage = 0): array
     {
-        $search = $filters['search'] ?? null;
-        $perPage = $filters['per_page'] ?? $perPage;
-        $sort = $filters['sort'] ?? null;
-        $order = $filters['order'] ?? 'asc';
+        $search  = $filters['search'] ?? null;
+        $perPage = (int) ($filters['per_page'] ?? $perPage);
+        $sort    = $filters['sort'] ?? null;
+        $order   = $filters['order'] ?? 'asc';
 
         if ($search) {
             // BaseModel::search() gracefully handles empty searchableFields
@@ -42,8 +42,9 @@ abstract class BaseService
             $this->model->orderBy($sort, $order);
         }
 
-        if ((int)$perPage > 0) {
-            $data = $this->model->paginate((int)$perPage);
+        if ($perPage > 0) {
+            $perPage = min($perPage, AppConstants::MAX_PER_PAGE);
+            $data = $this->model->paginate($perPage);
             return [
                 'data'  => $data,
                 'pager' => $this->model->pager

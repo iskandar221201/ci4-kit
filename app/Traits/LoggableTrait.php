@@ -58,7 +58,7 @@ trait LoggableTrait
      *
      * @warning Do NOT pass sensitive data (PII, tokens, passwords) in $context.
      */
-    public function logInfo(string $action, array $context = []): void
+    protected function logInfo(string $action, array $context = []): void
     {
         log_message('info', $this->buildLogPayload('INFO', $action, $context));
     }
@@ -71,7 +71,7 @@ trait LoggableTrait
      *
      * @warning Do NOT pass sensitive data (PII, tokens, passwords) in $context.
      */
-    public function logWarning(string $action, array $context = []): void
+    protected function logWarning(string $action, array $context = []): void
     {
         log_message('warning', $this->buildLogPayload('WARNING', $action, $context));
     }

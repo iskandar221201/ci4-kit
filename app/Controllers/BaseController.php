@@ -49,7 +49,7 @@ abstract class BaseController extends Controller
         // Preload any models, libraries, etc, here.
         // $this->session = service('session');
 
-        $this->helpers = array_merge($this->helpers, ['response']);
+        // response_helper is autoloaded via Config/Autoload.php — no need to load it manually here.
         if (function_exists('auth') && auth()->loggedIn()) {
             $this->currentUser = auth()->user();
         }

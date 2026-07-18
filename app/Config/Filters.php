@@ -35,9 +35,10 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         // Kit custom filters
-        'corsFilter'    => \App\Filters\CorsFilter::class,
-        'authFilter'    => \App\Filters\AuthFilter::class,
-        'apiKeyFilter'  => \App\Filters\ApiKeyFilter::class,
+        'corsFilter'     => \App\Filters\CorsFilter::class,
+        'authFilter'     => \App\Filters\AuthFilter::class,
+        'apiKeyFilter'   => \App\Filters\ApiKeyFilter::class,
+        'jsonBodyFilter' => \App\Filters\JsonBodyFilter::class,
     ];
 
     /**
@@ -116,6 +117,11 @@ class Filters extends BaseFilters
         'corsFilter' => [
             'before' => ['api/*'],
             'after'  => ['api/*'],
+        ],
+        // Reject POST/PUT/PATCH requests that do not send Content-Type: application/json.
+        // Using a filter (not exit() in BaseApiController) ensures after-filters still run.
+        'jsonBodyFilter' => [
+            'before' => ['api/*'],
         ],
     ];
 }

@@ -17,27 +17,19 @@ abstract class BaseApiController extends BaseController
     {
         parent::initController($request, $response, $logger);
 
+        // Force Content-Type: application/json on all API responses.
         $this->response->setHeader('Content-Type', 'application/json');
 
+        // Populate $apiUser from the Shield token authenticator if the request is authenticated.
         if (function_exists('auth')) {
-            // Check if tokens auth is active
             $authenticator = auth('tokens');
             if ($authenticator->loggedIn()) {
                 $this->apiUser = $authenticator->user();
             }
         }
 
-        $method = $this->request->getMethod();
-        if (in_array(strtoupper($method), ['POST', 'PUT', 'PATCH'])) {
-            $contentType = $this->request->getHeaderLine('Content-Type');
-            if (!str_contains($contentType, 'application/json')) {
-                // Output JSON error dan exit
-                $this->response
-                    ->setStatusCode(400)
-                    ->setJSON(['status' => false, 'code' => 400, 'message' => 'Request body must be application/json', 'errors' => null])
-                    ->send();
-                exit();
-            }
-        }
+        // Content-Type: application/json validation for POST/PUT/PATCH requests
+        // is handled by JsonBodyFilter (app/Filters/JsonBodyFilter.php),
+        // so the CI4 response pipeline (after-filters, CORS headers) is never bypassed.
     }
 }

@@ -8,6 +8,7 @@ use App\Exceptions\ServiceException;
 use App\Exceptions\ValidationException;
 use App\Models\UserModel;
 use CodeIgniter\Shield\Entities\User;
+use Config\AppConstants;
 
 /**
  * UserService — reference implementation for user resource management.
@@ -66,10 +67,56 @@ class UserService extends BaseService
         $id = $userModel->insert($user, true);
 
         if ($id === false || $id === 0) {
-            throw new ServiceException('Failed to create user record', 500);
+            throw new ServiceException('Failed to create user record', AppConstants::HTTP_SERVER_ERROR);
         }
 
         return $id;
+    }
+
+    /**
+     * Update an existing user's non-credential fields.
+     *
+     * Validates input, strips fields that must not be updated directly
+     * (id, created_at, email, password), then delegates to parent::update().
+     *
+     * NOTE: Email and password are NOT handled by this method because both
+     * are stored in the auth_identities table and managed by Shield separately.
+     * To change email/password, use Shield's dedicated credential flow.
+     *
+     * @param int|string           $id   The ID of the user to update.
+     * @param array<string, mixed> $data Fields to update.
+     *
+     * @return bool true on success.
+     *
+     * @throws ValidationException if input fails validation.
+     * @throws ServiceException    if there are no valid fields to update,
+     *                             or if the DB update fails.
+     */
+    public function updateUser(int|string $id, array $data): bool
+    {
+        $rules = [];
+
+        // Conditional validation: only validate fields that are actually sent
+        if (isset($data['username'])) {
+            $rules['username'] = "required|min_length[3]|is_unique[users.username,id,{$id}]";
+        }
+
+        if (! empty($rules)) {
+            // Throws ValidationException on failure
+            $this->validate($data, $rules);
+        }
+
+        // Strip fields that must not be updated directly via this method.
+        // Email is managed by Shield (auth_identities), password requires a dedicated hashing flow.
+        foreach (['id', 'created_at', 'updated_at', 'deleted_at', 'email', 'password', 'password_hash'] as $field) {
+            unset($data[$field]);
+        }
+
+        if (empty($data)) {
+            throw new ServiceException('No valid fields to update', AppConstants::HTTP_BAD_REQUEST);
+        }
+
+        return parent::update($id, $data);
     }
 
     /**

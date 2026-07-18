@@ -12,32 +12,31 @@ class CorsFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        $allowedOrigins = env('CORS_ALLOWED_ORIGINS', '*');
-        $allowedMethods = env('CORS_ALLOWED_METHODS', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-        $allowedHeaders = env('CORS_ALLOWED_HEADERS', 'Content-Type,Authorization,X-Requested-With');
-
         $response = service('response');
-        $response->setHeader('Access-Control-Allow-Origin', $allowedOrigins);
-        $response->setHeader('Access-Control-Allow-Methods', $allowedMethods);
-        $response->setHeader('Access-Control-Allow-Headers', $allowedHeaders);
+        $this->setCorsHeaders($response);
 
         if (strtoupper($request->getMethod()) === 'OPTIONS') {
             return $response->setStatusCode(204)->setBody('');
         }
-        
+
         return null;
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
-        $allowedOrigins = env('CORS_ALLOWED_ORIGINS', '*');
-        $allowedMethods = env('CORS_ALLOWED_METHODS', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-        $allowedHeaders = env('CORS_ALLOWED_HEADERS', 'Content-Type,Authorization,X-Requested-With');
-
-        $response->setHeader('Access-Control-Allow-Origin', $allowedOrigins);
-        $response->setHeader('Access-Control-Allow-Methods', $allowedMethods);
-        $response->setHeader('Access-Control-Allow-Headers', $allowedHeaders);
+        $this->setCorsHeaders($response);
 
         return $response;
+    }
+
+    /**
+     * Inject CORS headers into the response from .env values.
+     * Called in both before() and after() to ensure headers are always present.
+     */
+    private function setCorsHeaders(ResponseInterface $response): void
+    {
+        $response->setHeader('Access-Control-Allow-Origin',  env('CORS_ALLOWED_ORIGINS', '*'));
+        $response->setHeader('Access-Control-Allow-Methods', env('CORS_ALLOWED_METHODS', 'GET,POST,PUT,PATCH,DELETE,OPTIONS'));
+        $response->setHeader('Access-Control-Allow-Headers', env('CORS_ALLOWED_HEADERS', 'Content-Type,Authorization,X-Requested-With'));
     }
 }

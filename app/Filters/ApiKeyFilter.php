@@ -13,7 +13,6 @@ class ApiKeyFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        helper('response');
         $authHeader = $request->getHeaderLine('Authorization');
         
         if (empty($authHeader) || strpos($authHeader, 'Bearer ') !== 0) {

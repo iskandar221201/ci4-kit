@@ -9,9 +9,9 @@ use CodeIgniter\Router\RouteCollection;
 // =========================================================
 $routes->get('/', 'Home::index');
 
-// NOTE: AuthController and DashboardController are placeholder
-// controllers that need to be created by the developer.
-// They are not part of the kit itself — they are usage examples.
+// ⚠️  PLACEHOLDER — AuthController does not exist in this kit yet.
+//     Create app/Controllers/AuthController.php before this route can be used.
+//     See Shield documentation for login implementation: https://shield.codeigniter.com
 $routes->post('login', 'AuthController::login');
 
 // =========================================================
@@ -37,7 +37,8 @@ $routes->group('api', ['filter' => 'apiKeyFilter'], static function (RouteCollec
 // =========================================================
 // Web Routes — Protected (authFilter)
 // =========================================================
-// NOTE: DashboardController is a placeholder — create it in app/Controllers/.
+// ⚠️  PLACEHOLDER — DashboardController does not exist in this kit yet.
+//     Create app/Controllers/DashboardController.php before this route can be used.
 $routes->group('', ['filter' => 'authFilter'], static function (RouteCollection $routes): void {
     $routes->get('dashboard', 'DashboardController::index');
 });

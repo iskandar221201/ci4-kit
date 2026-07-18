@@ -124,7 +124,7 @@ class UserController extends BaseApiController
             }
 
             $data = $this->request->getJSON(true) ?? [];
-            $this->userService->update($id, $data);
+            $this->userService->updateUser($id, $data);
             $updated = $this->userService->findById($id);
 
             return $this->success($this->sanitizeUser($updated), 'User updated');
