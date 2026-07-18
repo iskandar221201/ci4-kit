@@ -406,6 +406,7 @@ PHP 8.2 or higher with the following extensions:
 | `json` | Enabled by default |
 | `mysqlnd` | Required for MySQL |
 | `libcurl` | Required if using `HTTP\CURLRequest` |
+| `curl` | Required if using `S3Driver` |
 
 ---
 
