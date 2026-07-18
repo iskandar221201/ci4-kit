@@ -1,69 +1,151 @@
-# CodeIgniter 4 Application Starter
+# CI4 Production Grade Kit (ci4-pgk)
 
-## What is CodeIgniter?
+A CodeIgniter 4 starter kit with production-ready patterns:
+structured API responses, Shield authentication, filter stack, service layer,
+and structured JSON logging — ready to clone and extend.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+---
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## Requirements
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+- PHP 8.2+
+- Composer
+- MySQL 8.0+ or MariaDB 10.5+
+- Web server (Apache / Nginx) or `php spark serve`
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+---
 
-## Installation & updates
+## Quick Start
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+```bash
+# 1. Clone and enter the project
+git clone <repo-url> my-project && cd my-project
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+# 2. Copy environment template and fill in DB credentials
+cp .env.example .env
 
-## Setup
+# 3. Install dependencies
+composer install
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+# 4. Run all migrations (CI4 + Shield tables)
+php spark migrate --all
 
-## Important Change with index.php
+# 5. Start the development server
+php spark serve
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+# 6. Verify the setup
+curl http://localhost:8080/api/ping
+# Expected: {"status":true,"code":200,"message":"pong","data":null}
+```
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+---
 
-**Please** read the user guide for a better explanation of how CI4 works!
+## Architecture Overview
 
-## Repository Management
+```
+Request → Filter Stack → Controller → Service → Model → Database
+```
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+- **Controller** — receives the request, delegates to the Service, returns a JSON response.
+  Never accesses a Model directly.
+- **Service** — holds business logic, validates input, orchestrates Model calls.
+- **Model** — extends `BaseModel`, handles DB queries and soft deletes.
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+All API responses use the standard envelope:
+
+```json
+{"status": true, "code": 200, "message": "...", "data": {...}}
+{"status": false, "code": 422, "message": "...", "errors": {...}}
+```
+
+---
+
+## How to Add a New Resource
+
+Example: adding a `Post` resource.
+
+1. Create migration:
+   ```bash
+   php spark make:migration CreatePostsTable
+   php spark migrate
+   ```
+
+2. Create Model — `app/Models/PostModel.php`:
+   ```php
+   class PostModel extends BaseModel { ... }
+   ```
+
+3. Create Service — `app/Services/PostService.php`:
+   ```php
+   class PostService extends BaseService {
+       protected string $modelClass = PostModel::class;
+   }
+   ```
+
+4. Create Controller — `app/Controllers/Api/PostController.php`:
+   ```php
+   class PostController extends BaseApiController { ... }
+   ```
+
+5. Register routes in `app/Config/Routes.php`:
+   ```php
+   $routes->group('api', ['filter' => 'apiKeyFilter'], static function ($routes) {
+       $routes->get('posts', 'Api\PostController::index');
+       $routes->post('posts', 'Api\PostController::create');
+       $routes->get('posts/(:num)', 'Api\PostController::show/$1');
+       $routes->put('posts/(:num)', 'Api\PostController::update/$1');
+       $routes->delete('posts/(:num)', 'Api\PostController::delete/$1');
+   });
+   ```
+
+See `app/Services/UserService.php` and `app/Controllers/Api/UserController.php` as a full reference.
+
+---
+
+## Filter Stack
+
+```
+Request → CorsFilter → ApiKeyFilter / AuthFilter → Controller
+```
+
+| Filter | Path | Purpose |
+|---|---|---|
+| `CorsFilter` | `api/*` | Injects CORS headers; handles OPTIONS preflight (204) |
+| `ApiKeyFilter` | `api/*` (protected group) | Validates Bearer token via Shield AccessTokens |
+| `AuthFilter` | web routes | Checks session login; redirects to `/login` if missing |
+
+Filter registration: `app/Config/Filters.php`
+
+---
+
+## Logging
+
+Use `AppLogger` anywhere:
+
+```php
+use App\Libraries\AppLogger;
+
+AppLogger::info('payment.success', ['amount' => 50000, 'user_id' => 12]);
+AppLogger::error('webhook.failed', ['payload' => $raw], $exception);
+```
+
+Inside a Controller (via `LoggableTrait`):
+
+```php
+$this->logInfo('user.created', ['id' => $userId]);
+$this->logError('user.create.failed', [], $e);
+```
+
+Logs are written to `writable/logs/` as structured JSON strings.
+
+---
 
 ## Server Requirements
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+PHP 8.2 or higher with the following extensions:
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+- `intl`
+- `mbstring`
+- `json` (enabled by default)
+- `mysqlnd` (for MySQL)
+- `libcurl` (if using `HTTP\CURLRequest`)

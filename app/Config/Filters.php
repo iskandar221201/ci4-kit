@@ -34,6 +34,10 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        // Kit custom filters
+        'corsFilter'    => \App\Filters\CorsFilter::class,
+        'authFilter'    => \App\Filters\AuthFilter::class,
+        'apiKeyFilter'  => \App\Filters\ApiKeyFilter::class,
     ];
 
     /**
@@ -106,5 +110,12 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [];
+    public array $filters = [
+        // Apply CorsFilter to all /api/* routes (before and after)
+        // so CORS headers are always present, including preflight OPTIONS.
+        'corsFilter' => [
+            'before' => ['api/*'],
+            'after'  => ['api/*'],
+        ],
+    ];
 }

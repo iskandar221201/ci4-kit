@@ -101,6 +101,45 @@ class Exceptions extends BaseConfig
      */
     public function handler(int $statusCode, Throwable $exception): ExceptionHandlerInterface
     {
+        $request = \Config\Services::request();
+        
+        // CI4 request getPath() might be deprecated in some versions, but following spec exactly
+        $path = $request->getPath();
+
+        \App\Libraries\AppLogger::error('exception.uncaught', ['path' => $path, 'method' => $request->getMethod()], $exception);
+
+        if (str_starts_with($path, 'api/') || str_starts_with($path, '/api/')) {
+            $statusCode = $statusCode > 0 ? $statusCode : 500;
+            
+            $body = [
+                'status'  => false,
+                'code'    => $statusCode,
+                'message' => ENVIRONMENT === 'production' ? 'Internal Server Error' : $exception->getMessage(),
+                'errors'  => null,
+            ];
+
+            if (ENVIRONMENT !== 'production') {
+                $body['debug'] = [
+                    'exception' => get_class($exception),
+                    'message'   => $exception->getMessage(),
+                    'file'      => $exception->getFile(),
+                    'line'      => $exception->getLine(),
+                ];
+            }
+
+            $json = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($json === false) {
+                $json = '{"status":false,"code":500,"message":"Internal Server Error","errors":null}';
+            }
+
+            $response = \Config\Services::response();
+            $response->setStatusCode($statusCode)
+                     ->setHeader('Content-Type', 'application/json')
+                     ->setBody($json);
+            $response->send();
+            exit;
+        }
+
         return new ExceptionHandler($this);
     }
 }
