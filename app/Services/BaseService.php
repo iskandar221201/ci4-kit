@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace App\Services;
 
+use App\Traits\AuditTrailTrait;
 use CodeIgniter\Model;
 use App\Validation\BaseValidator;
 use App\Exceptions\ServiceException;
@@ -10,6 +11,7 @@ use Config\AppConstants;
 
 abstract class BaseService
 {
+    use AuditTrailTrait;
     /** @var string Must be set in the child class to bind a Model. */
     protected string $modelClass;
 
@@ -63,7 +65,7 @@ abstract class BaseService
         ];
     }
 
-    public function findById(int|string $id): ?object
+    public function findById(int|string $id): mixed
     {
         return $this->model->find($id);
     }
@@ -76,13 +78,17 @@ abstract class BaseService
             throw new ServiceException('Failed to create record', AppConstants::HTTP_SERVER_ERROR);
         }
 
+        $this->auditCreate($id, $data);
+
         return $id;
     }
 
     public function update(int|string $id, array $data): bool
     {
         // FIX: check existence first so no-op updates don't false-404
-        if (!$this->model->find($id)) {
+        $old = $this->model->find($id);
+
+        if (!$old) {
             throw new ServiceException('Record not found', AppConstants::HTTP_NOT_FOUND);
         }
 
@@ -92,13 +98,17 @@ abstract class BaseService
             throw new ServiceException('Failed to update record', AppConstants::HTTP_SERVER_ERROR);
         }
 
+        $this->auditUpdate($id, (array) $old, $data);
+
         return true;
     }
 
     public function delete(int|string $id): bool
     {
         // FIX: check existence first — soft delete doesn't reliably reflect in affectedRows()
-        if (!$this->model->find($id)) {
+        $old = $this->model->find($id);
+
+        if (!$old) {
             throw new ServiceException('Record not found', AppConstants::HTTP_NOT_FOUND);
         }
 
@@ -107,6 +117,8 @@ abstract class BaseService
         if ($result === false) {
             throw new ServiceException('Failed to delete record', AppConstants::HTTP_SERVER_ERROR);
         }
+
+        $this->auditDelete($id, (array) $old);
 
         return true;
     }

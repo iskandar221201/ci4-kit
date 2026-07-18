@@ -18,6 +18,7 @@ A production-ready CodeIgniter 4 starter kit with structured API responses, Shie
 - [API Response Envelope](#api-response-envelope)
 - [Filter Stack](#filter-stack)
 - [Logging](#logging)
+- [Audit Trail](#audit-trail)
 - [How to Add a New Resource](#how-to-add-a-new-resource)
 - [Server Requirements](#server-requirements)
 
@@ -110,6 +111,7 @@ app/
 │   └── UserService.php       # User resource — full reference implementation
 ├── Traits/
 │   ├── ApiResponseTrait.php  # success(), error(), created(), paginate(), noContent()
+│   ├── AuditTrailTrait.php   # auditCreate(), auditUpdate(), auditDelete(), auditRestore()
 │   ├── LoggableTrait.php     # logInfo(), logWarning(), logError() with JSON payload
 │   └── QueryScopesTrait.php  # search(), dateRange(), active() — used by BaseModel and Shield-based models
 └── Validation/
@@ -210,6 +212,41 @@ Every log entry is a structured JSON line written to `writable/logs/`:
 ```
 
 > **Warning:** Never pass sensitive data (passwords, tokens, PII) in the `$context` array.
+
+---
+
+## Audit Trail
+
+This kit now includes an optional audit trail layer for important create/update/delete operations.
+It is wired at the service layer, so controllers stay clean and audit logging is transparent.
+
+### What gets recorded
+
+Each audit log entry stores:
+- actor information (`user_id`, `user_type`)
+- action (`create`, `update`, `delete`, `restore`)
+- target model and record id
+- old/new values
+- request metadata (`ip_address`, `user_agent`)
+- creation timestamp
+
+### Files involved
+
+- [app/Database/Migrations/20260718120000_CreateAuditLogsTable.php](app/Database/Migrations/20260718120000_CreateAuditLogsTable.php)
+- [app/Models/AuditLogModel.php](app/Models/AuditLogModel.php)
+- [app/Traits/AuditTrailTrait.php](app/Traits/AuditTrailTrait.php)
+- [app/Services/BaseService.php](app/Services/BaseService.php)
+
+### Run the migration
+
+```bash
+php spark migrate
+```
+
+### Notes
+
+- `auditUpdate()` only records fields that actually changed, so the log stays compact and useful.
+- Audit logging is non-blocking by design; failures are logged and do not break normal request flow.
 
 ---
 
