@@ -1,17 +1,11 @@
 <?= $this->extend('_layouts/main') ?>
 
 <?= $this->section('content') ?>
+
+<?= $this->include('_partials/page_header') ?>
+
 <div x-data="{ ...detailFetcher('/api/users/<?= esc($id) ?>'), editMode: false, user: { username: '', email: '' } }"
      x-init="init().then(() => { user.username = data.username; user.email = data.email })">
-
-    <?= $this->include('_partials/page_header', [
-        'title'       => 'Detail User',
-        'breadcrumbs' => [
-            ['label' => 'Dashboard', 'url' => '/dashboard'],
-            ['label' => 'Users', 'url' => '/users'],
-            ['label' => 'Detail']
-        ]
-    ]) ?>
 
     <!-- Loading -->
     <div x-show="loading" class="mt-6 text-sm text-gray-400">Memuat data...</div>

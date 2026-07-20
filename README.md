@@ -1,12 +1,12 @@
-# CodeIgniter 4  Production Grade Kit
+# CodeIgniter 4 Production Grade Kit
 ![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat-square&logo=php&logoColor=white)
 ![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EF4223?style=flat-square&logo=codeigniter&logoColor=white)
 ![Shield](https://img.shields.io/badge/Shield-Auth-22c55e?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=flat-square)
-![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-3.0.0-blue?style=flat-square)
 
-A production-ready CodeIgniter 4 starter kit with structured API responses, Shield authentication, layered filter stack, service layer architecture, and structured JSON logging — ready to clone and extend.
+A production-ready CodeIgniter 4 starter kit with structured API responses, Shield authentication, layered filter stack, service layer architecture, structured JSON logging, and a clean token-based web UI layer — ready to clone and extend.
 
 ---
 
@@ -18,6 +18,8 @@ A production-ready CodeIgniter 4 starter kit with structured API responses, Shie
 - [Project Structure](#project-structure)
 - [API Response Envelope](#api-response-envelope)
 - [Filter Stack](#filter-stack)
+- [Authentication Flow](#authentication-flow)
+- [Web UI Layer](#web-ui-layer)
 - [Logging](#logging)
 - [File Uploads](#file-uploads)
 - [Transformers](#transformers)
@@ -59,10 +61,17 @@ composer install
 # 4. Run all migrations (CI4 + Shield tables)
 php spark migrate --all
 
-# 5. Start the development server
+# 5. Seed the admin user
+php spark db:seed AdminSeeder
+
+# 6. Start the development server
 php spark serve
 
-# 6. Verify the setup
+# 7. Open the web UI
+open http://localhost:8080/login
+# Email: admin@example.com  |  Password: password123
+
+# 8. Verify the API
 curl http://localhost:8080/api/ping
 # Expected: {"status":true,"code":200,"message":"pong","data":null}
 ```
@@ -79,12 +88,13 @@ Request → Filter Stack → Controller → Service → Model → Database
 
 | Layer | Responsibility |
 |---|---|
-| **Controller** | Receives the request, delegates to the Service, returns a JSON response. Never accesses a Model directly. |
+| **Web Controller** | Serves HTML views. No business logic — just passes data to views. |
+| **API Controller** | Receives JSON requests, delegates to Service, returns JSON response. Never accesses a Model directly. |
 | **Service** | Holds business logic, validates input, orchestrates Model calls. |
 | **Transformer** | Shapes and sanitizes response payloads before they reach the API response layer. |
-| **Model** | App models extend `BaseModel` (soft delete, search/dateRange scopes). Shield-based models extend `ShieldUserModel` directly. Both are compatible with `BaseService`. |
+| **Model** | App models extend `BaseModel` (soft delete, search/dateRange scopes). Shield-based models extend `ShieldUserModel` directly. |
 
-### Optional Layers (v2.0)
+### Optional Layers (v2.0+)
 
 | Layer | Files | Notes |
 |---|---|---|
@@ -112,14 +122,18 @@ app/
 ├── Config/
 │   ├── AppConstants.php      # HTTP status codes and app-wide constants
 │   ├── Filters.php           # Filter aliases and route bindings
-│   ├── Routes.php            # Route definitions
+│   ├── Routes.php            # Route definitions (web + API)
 │   └── SSOConfig.php         # SSO toggle + RSA key config (v2.0)
 ├── Controllers/
 │   ├── BaseController.php    # Base for all controllers (traits wired here)
-│   └── Api/
-│       ├── BaseApiController.php   # Forces JSON response, populates $apiUser
-│       ├── PingController.php      # Health check endpoints
-│       └── UserController.php      # Full CRUD reference implementation
+│   ├── Api/
+│   │   ├── BaseApiController.php   # Forces JSON response, populates $apiUser
+│   │   ├── AuthController.php      # Token-based login endpoint
+│   │   ├── PingController.php      # Health check endpoints
+│   │   └── UserController.php      # Full CRUD reference implementation
+│   └── Web/
+│       ├── DashboardController.php # Serves dashboard view
+│       └── UserWebController.php   # Serves user management views
 ├── Exceptions/
 │   ├── ServiceException.php        # General service-layer exception
 │   └── ValidationException.php     # Wraps validation errors (422)
@@ -157,7 +171,40 @@ app/
 ├── Validation/
 │   └── BaseValidator.php     # Thin wrapper around CI4 Validation service
 └── Views/
+    ├── _layouts/
+    │   ├── auth.php          # Minimal layout for login page
+    │   └── main.php          # App shell layout (sidebar + navbar)
+    ├── _partials/
+    │   ├── navbar.php        # Top bar — reads username from localStorage
+    │   ├── sidebar.php       # Side nav — app name from APP_NAME env
+    │   ├── page_header.php   # Page title + breadcrumb + optional action button
+    │   ├── datatable.php     # Reusable table with pagination
+    │   ├── search_bar.php    # Debounced search input
+    │   ├── form.php          # Generic form wrapper (Alpine formHandler)
+    │   ├── confirm_dialog.php# Confirmation modal for destructive actions
+    │   ├── error_toast.php   # Global toast notification
+    │   ├── empty_state.php   # Empty data illustration
+    │   ├── detail_card.php   # Label-value detail card
+    │   ├── badge.php         # Status badge
+    │   ├── loading_overlay.php # Full-page loading overlay
+    │   └── flash.php         # Server-side flash messages
+    ├── auth/
+    │   └── login.php         # Login page
+    ├── dashboard/
+    │   └── index.php         # Dashboard home
+    ├── users/
+    │   ├── index.php         # User list with search + pagination
+    │   ├── create.php        # Create user form (username, email, password)
+    │   └── detail.php        # User detail + inline edit + delete
     └── exports/              # PDF export templates — plain HTML, no layout (v2.0)
+```
+
+```
+public/assets/js/
+├── auth.js        # Token + username storage (localStorage), auth guard
+├── api.js         # Fetch wrapper — attaches Bearer token, unwraps envelope
+├── error.js       # Global errorHandler toast driver
+└── components.js  # Alpine component definitions (dataTable, formHandler, etc.)
 ```
 
 > Files marked `(v2.0)` are additive. Projects using v1.x are unaffected.
@@ -224,6 +271,155 @@ Filter registration: `app/Config/Filters.php`
 
 ---
 
+## Authentication Flow
+
+This kit uses **token-based authentication** for all API calls. The web UI stores the token in `localStorage` and attaches it as a `Bearer` header on every request via `api.js`.
+
+### Login
+
+```
+POST /api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@example.com", "password": "password123" }
+```
+
+Response:
+```json
+{
+  "status": true,
+  "code": 200,
+  "message": "Login berhasil",
+  "data": {
+    "token": "<shield-access-token>",
+    "email": "admin@example.com",
+    "username": "admin"
+  }
+}
+```
+
+The `AuthController` validates credentials directly via Shield's user provider and `service('passwords')->verify()` — **without touching the PHP session at all**. This avoids Shield's session-state conflict error (`The user has User Info in Session`) when hitting the login endpoint multiple times or from stateless API clients.
+
+Credential validation flow:
+1. `findByCredentials(['email' => ...])` — fetch user + populate `password_hash` from `auth_identities`
+2. `service('passwords')->verify(...)` — bcrypt comparison, no session side-effect
+3. `user->active` check — reject inactive accounts with `403`
+4. `generateAccessToken('api-login')` — issue Shield access token
+
+After login, `auth.js` stores the token and username in `localStorage`:
+
+```js
+auth.setToken(data.token)
+auth.setUsername(data.username || data.email)
+```
+
+### Auth Guard (client-side)
+
+`auth.js` runs `checkAuthRoute()` automatically on every page load:
+
+- If authenticated → blocks access back to `/login`
+- If not authenticated → redirects to `/login` from any protected path
+
+### Logout
+
+```js
+auth.logout() // clears localStorage and redirects to /login
+```
+
+### `api.js` behavior
+
+| HTTP Status | Behavior |
+|---|---|
+| `401` on non-login routes | `auth.logout()` — clear token and redirect |
+| `401` on `/api/auth/login` | Throw `{ message }` — display error in form |
+| `422` | Throw `{ errors }` — mapped per-field in form |
+| Other non-OK | `errorHandler.catch()` — show toast |
+
+---
+
+## Web UI Layer
+
+The web UI is a server-rendered PHP shell with Alpine.js components calling the API. It is **stateless on the server** — all auth state lives in `localStorage`.
+
+### Routes
+
+| Method | Path | Controller | Description |
+|---|---|---|---|
+| GET | `/login` | `Web\UserWebController::loginPage` | Login page |
+| GET | `/dashboard` | `Web\DashboardController::index` | Dashboard |
+| GET | `/users` | `Web\UserWebController::index` | User list |
+| GET | `/users/create` | `Web\UserWebController::create` | Create user form |
+| GET | `/users/:id` | `Web\UserWebController::detail` | User detail + edit |
+
+### App Name
+
+The app name displayed in the sidebar and login page is read from `.env`:
+
+```
+APP_NAME="My App"
+```
+
+Rendered via `env('APP_NAME', 'CI4 Kit')` — no hardcoding in views.
+
+### Username Display
+
+The logged-in user's name in the navbar is read from `localStorage` via Alpine:
+
+```html
+<span x-data="{ displayName: auth.getUsername() }" x-text="displayName"></span>
+```
+
+`auth.setUsername()` is called at login with `data.username || data.email` from the API response.
+
+### JS Load Order
+
+Scripts must be loaded in this order so Alpine can reference `auth`, `api`, and `errorHandler` on init:
+
+```html
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/error.js"></script>
+<script src="/assets/js/api.js"></script>
+<script src="/assets/js/components.js"></script>
+<script defer src="alpinejs CDN"></script>
+```
+
+Alpine uses `defer` so it initializes after the CI4 Kit globals are defined.
+
+### User Management
+
+Administrators can create users from the web UI at `/users/create`. The form accepts:
+
+| Field | Notes |
+|---|---|
+| Username | Required, min 3 chars, unique |
+| Email | Required, valid email, unique |
+| Password | Required, min 8 chars — set by admin at creation time, shown as plain text input |
+
+Users created via the web UI are **automatically activated** (`active = 1`) — no email verification required.
+
+The user list at `/users` includes a **Tambah User** button in the page header that links to `/users/create`.
+
+---
+
+## UI Design System
+
+All views follow a consistent clean white style — no blue/purple accents. The design system is:
+
+| Element | Style |
+|---|---|
+| Background | `bg-white` — no colored backgrounds |
+| Border | `border-gray-200` — thin neutral borders |
+| Primary button | `bg-gray-900 hover:bg-gray-700` — charcoal black |
+| Secondary button | `border-gray-300 text-gray-600` — outlined neutral |
+| Input focus | `focus:ring-gray-400` — neutral, not blue |
+| Danger action | `text-red-600` — red only for destructive actions |
+| Toast (info) | `bg-gray-800` — dark neutral |
+| Active nav item | `bg-gray-900 text-white` — same as primary button |
+
+The app name in the sidebar and login page title is always read from `env('APP_NAME')` — never hardcoded in views.
+
+---
+
 ## Logging
 
 `AppLogger` can be called statically from anywhere:
@@ -247,7 +443,7 @@ Every log entry is a structured JSON line written to `writable/logs/`:
 
 ```json
 {
-  "timestamp": "2026-07-18T08:44:00+07:00",
+  "timestamp": "2026-07-20T08:44:00+07:00",
   "level": "INFO",
   "action": "user.created",
   "user_id": 3,
@@ -262,12 +458,12 @@ Every log entry is a structured JSON line written to `writable/logs/`:
 
 ## File Uploads
 
-The kit now includes a reusable uploader service in [app/Libraries/FileUploader.php](app/Libraries/FileUploader.php) for handling module uploads consistently.
+The kit includes a reusable uploader service in [app/Libraries/FileUploader.php](app/Libraries/FileUploader.php) for handling module uploads consistently.
 
 It supports:
 - configurable max size and allowed extensions
 - UUID-based filenames by default
-- structured storage under writable/uploads/{module}/{year}/{month}/
+- structured storage under `writable/uploads/{module}/{year}/{month}/`
 - pluggable storage drivers with Local as the default and optional S3-compatible support
 - deletion of old files when replacing uploads
 
@@ -322,8 +518,7 @@ Helper methods available: `only(array $data, array $keys)`, `except(array $data,
 
 ## Audit Trail
 
-This kit now includes an optional audit trail layer for important create/update/delete operations.
-It is wired at the service layer, so controllers stay clean and audit logging is transparent.
+This kit includes an optional audit trail layer for important create/update/delete operations. It is wired at the service layer, so controllers stay clean and audit logging is transparent.
 
 ### What gets recorded
 
@@ -364,7 +559,7 @@ The kit includes an optional JWT RS256-based Single Sign-On layer for cross-appl
 ```
 SSO Server                    Resource Server
 ──────────────                ──────────────────────────────
-POST /api/login               Authorization: Bearer <JWT>
+POST /api/auth/login          Authorization: Bearer <JWT>
     ↓                                  ↓
 JWTService::sign()            SSOFilter::before()
     ↓                                  ↓
@@ -411,15 +606,13 @@ $routes->group('api', ['filter' => 'ssoFilter'], static function ($routes) {
 });
 ```
 
-`ssoFilter` and `apiKeyFilter` can be used on different route groups in the same app.
-
 ### Issue a token (SSO Server)
 
 ```php
 // app/Controllers/Api/AuthController.php
 public function login(): ResponseInterface
 {
-    // 1. Validate credentials (via Shield or custom logic)
+    // 1. Validate credentials
     // 2. Sign JWT
     $token = (new \App\Libraries\JWTService())->sign([
         'sub'   => (string) $user->id,
@@ -433,8 +626,7 @@ public function login(): ResponseInterface
 ### Access the payload (Resource Server)
 
 ```php
-// In any controller on a ssoFilter-protected route
-$ssoUser = $this->request->ssoUser; // array: ['sub' => '1', 'email' => '...', 'iat' => ..., 'exp' => ...]
+$ssoUser = $this->request->ssoUser; // ['sub' => '1', 'email' => '...', 'iat' => ..., 'exp' => ...]
 ```
 
 ### Install
@@ -450,7 +642,6 @@ composer require firebase/php-jwt:^7.0
 - The `sub` claim is required in every token. `JWTService::sign()` will throw if absent.
 - Default TTL is 3600 seconds (1 hour). Override via `SSO_TOKEN_TTL`.
 - When `SSO_ENABLED=false`, `SSOFilter` is a complete pass-through — zero overhead.
-- Refresh tokens are not included in v2.0. Implement in your own app if needed.
 
 ---
 
@@ -466,12 +657,8 @@ composer require mpdf/mpdf:^8.2
 
 ### Create an exporter
 
-One subclass per resource — do not create one exporter for all modules.
-
 ```php
 // app/Libraries/UserPdfExporter.php
-namespace App\Libraries;
-
 class UserPdfExporter extends BasePdfExporter
 {
     protected function buildHtml(array $data): string
@@ -480,18 +667,6 @@ class UserPdfExporter extends BasePdfExporter
     }
 }
 ```
-
-For landscape or custom paper size, override the properties:
-
-```php
-class ReportPdfExporter extends BasePdfExporter
-{
-    protected string $orientation = 'L'; // Landscape
-    protected string $paperSize   = 'A3';
-}
-```
-
-For advanced layouts (letterhead, watermark, custom fonts), override `__construct()` — always call `parent::__construct()` first.
 
 ### Use in a controller
 
@@ -502,7 +677,7 @@ public function exportPdf(): ResponseInterface
 
     try {
         (new UserPdfExporter())->export($data, 'users-' . date('Ymd') . '.pdf');
-        exit; // PDF streams directly — bypass CI4 response pipeline
+        exit;
     } catch (\RuntimeException $e) {
         AppLogger::error('pdf.export.failed', [], $e);
         return $this->error('Failed to generate PDF', 500);
@@ -510,86 +685,49 @@ public function exportPdf(): ResponseInterface
 }
 ```
 
-### Create a PDF template
-
-Templates live in `app/Views/exports/`. They are plain HTML — **never extend any layout**.
-
-```php
-// app/Views/exports/users_pdf.php
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: sans-serif; font-size: 12px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ddd; padding: 6px 8px; }
-    th { background: #f3f4f6; }
-  </style>
-</head>
-<body>
-  <h2>Users</h2>
-  <table>
-    <thead><tr><th>No</th><th>Name</th><th>Email</th></tr></thead>
-    <tbody>
-      <?php foreach ($users as $i => $user): ?>
-      <tr>
-        <td><?= $i + 1 ?></td>
-        <td><?= esc($user['name']) ?></td>
-        <td><?= esc($user['email']) ?></td>
-      </tr>
-      <?php endforeach ?>
-    </tbody>
-  </table>
-</body>
-</html>
-```
-
-> **Always use `esc()`** for user-controlled data in templates — even inside PDFs.
-
 ### Notes
 
-- One exporter subclass per resource. Do not build a generic "export anything" class.
-- Templates in `app/Views/exports/` must not extend any CI4 layout — mPDF renders raw HTML.
-- mPDF supports UTF-8 and a CSS subset — sufficient for tables and standard reports.
-- For very large datasets, implement chunking in your subclass before calling `$this->pdf->WriteHTML()`.
+- One exporter subclass per resource.
+- Templates in `app/Views/exports/` must not extend any CI4 layout.
+- Always use `esc()` for user-controlled data in templates.
 
 ---
 
 ## Compatibility Matrix
 
-v2.0 is a **strict superset** of v1.x. No migrations required.
+v3.0 is a **strict superset** of v2.x. No database migrations required to upgrade.
 
-| Feature | v1.x | v2.0 |
-|---|---|---|
-| BE Layer (API, Service, Model) | ✅ | ✅ |
-| Shield Auth (session + token) | ✅ | ✅ |
-| Audit Trail | ✅ | ✅ |
-| File Upload + Storage Drivers | ✅ | ✅ |
-| Structured JSON Logging | ✅ | ✅ |
-| Transformers | ✅ | ✅ |
-| **SSO Layer (JWT RS256)** | ❌ | ✅ optional |
-| **PDF Export (mPDF)** | ❌ | ✅ optional |
+| Feature | v1.x | v2.0 | v3.0 |
+|---|---|---|---|
+| BE Layer (API, Service, Model) | ✅ | ✅ | ✅ |
+| Shield Auth (token-based) | ✅ | ✅ | ✅ |
+| Audit Trail | ✅ | ✅ | ✅ |
+| File Upload + Storage Drivers | ✅ | ✅ | ✅ |
+| Structured JSON Logging | ✅ | ✅ | ✅ |
+| Transformers | ✅ | ✅ | ✅ |
+| SSO Layer (JWT RS256) | ❌ | ✅ optional | ✅ optional |
+| PDF Export (mPDF) | ❌ | ✅ optional | ✅ optional |
+| **Web UI Layer** | ❌ | ❌ | ✅ |
+| **Token-based login (no session)** | ❌ | ❌ | ✅ |
+| **APP_NAME env binding** | ❌ | ❌ | ✅ |
+| **Admin user creation with password** | ❌ | ❌ | ✅ |
 
-### Upgrading from v1.x
+### Upgrading from v2.x
 
-No migration needed. Copy these files into your existing v1.x project:
+Copy these files into your existing v2.x project:
 
 | File | Purpose |
 |---|---|
-| `app/Config/SSOConfig.php` | SSO configuration |
-| `app/Libraries/JWTService.php` | JWT sign / verify |
-| `app/Filters/SSOFilter.php` | SSO filter |
-| `app/Libraries/BasePdfExporter.php` | PDF export base |
+| `app/Controllers/Api/AuthController.php` | Token login — no session conflict |
+| `app/Controllers/Web/` | Web controllers for views |
+| `app/Views/` | Full views layer (layouts, partials, pages) |
+| `public/assets/js/` | `auth.js`, `api.js`, `error.js`, `components.js` |
+| `app/Config/Routes.php` | Updated routes (web + API) |
 
-Then register `ssoFilter` in `app/Config/Filters.php`:
-
-```php
-'ssoFilter' => \App\Filters\SSOFilter::class,
+Add to `.env`:
 ```
-
-Add the SSO keys to your `.env` (copy from `.env.example`).
-
-Both features are disabled / unused until you explicitly activate them.
+APP_NAME="My App"
+```
 
 ---
 
@@ -624,7 +762,7 @@ class PostService extends BaseService
 }
 ```
 
-**4. Create the Controller** — `app/Controllers/Api/PostController.php`
+**4. Create the API Controller** — `app/Controllers/Api/PostController.php`
 
 ```php
 class PostController extends BaseApiController
@@ -637,9 +775,28 @@ class PostController extends BaseApiController
 }
 ```
 
-**5. Register routes** in `app/Config/Routes.php`
+**5. Create the Web Controller** — `app/Controllers/Web/PostWebController.php`
 
 ```php
+class PostWebController extends BaseController
+{
+    public function index()   { return view('posts/index'); }
+    public function create()  { return view('posts/create'); }
+    public function detail($id) { return view('posts/detail', ['id' => $id]); }
+}
+```
+
+**6. Register routes** in `app/Config/Routes.php`
+
+```php
+// Web routes
+$routes->group('', static function ($routes) {
+    $routes->get('posts',           'Web\PostWebController::index');
+    $routes->get('posts/create',    'Web\PostWebController::create');
+    $routes->get('posts/(:num)',    'Web\PostWebController::detail/$1');
+});
+
+// API routes
 $routes->group('api', ['filter' => 'apiKeyFilter'], static function ($routes) {
     $routes->get('posts',           'Api\PostController::index');
     $routes->post('posts',          'Api\PostController::create');

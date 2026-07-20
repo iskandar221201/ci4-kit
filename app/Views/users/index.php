@@ -1,12 +1,10 @@
 <?= $this->extend('_layouts/main') ?>
 
 <?= $this->section('content') ?>
+
+<?= $this->include('_partials/page_header') ?>
+
 <div x-data="dataTable('/api/users')">
-    <?= $this->include('_partials/page_header', [
-        'title'       => 'Daftar Users',
-        'breadcrumbs' => [['label' => 'Dashboard', 'url' => '/dashboard'], ['label' => 'Users']],
-        'action'      => ['label' => 'Tambah User', 'url' => '/users/create'],
-    ]) ?>
 
     <div class="mb-4">
         <?= $this->include('_partials/search_bar', ['placeholder' => 'Cari nama atau email...']) ?>

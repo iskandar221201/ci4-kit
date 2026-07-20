@@ -1,14 +1,8 @@
 <?= $this->extend('_layouts/main') ?>
 
 <?= $this->section('content') ?>
-<?= $this->include('_partials/page_header', [
-    'title'       => 'Tambah User',
-    'breadcrumbs' => [
-        ['label' => 'Dashboard', 'url' => '/dashboard'],
-        ['label' => 'Users', 'url' => '/users'],
-        ['label' => 'Tambah']
-    ]
-]) ?>
+
+<?= $this->include('_partials/page_header') ?>
 
 <div class="mt-6 bg-white rounded-lg border border-gray-200 p-6 max-w-md">
     <form x-data="{ ...formHandler('/api/users', 'POST', '/users'), user: { username: '', email: '', password: '' } }" @submit.prevent="submit(user)">
