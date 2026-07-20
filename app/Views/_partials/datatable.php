@@ -6,9 +6,7 @@
  *
  * Accepted variables:
  * @var array $columns (required) [['key' => string, 'label' => string], ...]
- *
- * Action columns (edit, delete, etc.) are added by individual pages
- * via $this->section() inserted after including this partial.
+ * @var array $actions (optional) [['label' => string, 'url' => string (Alpine expr), 'class' => string], ...]
  *
  * Usage example:
  *   <div x-data="dataTable('/api/users')">
@@ -18,9 +16,24 @@
  *         ['key' => 'email', 'label' => 'Email'],
  *     ]]) ?>
  *   </div>
+ *
+ * Usage with actions:
+ *   <div x-data="dataTable('/api/users')">
+ *     <?= $this->include('_partials/search_bar') ?>
+ *     <?= $this->include('_partials/datatable', [
+ *         'columns' => [
+ *             ['key' => 'name',  'label' => 'Nama'],
+ *             ['key' => 'email', 'label' => 'Email'],
+ *         ],
+ *         'actions' => [
+ *             ['label' => 'Detail', 'url' => "'/users/' + row.id"],
+ *         ],
+ *     ]) ?>
+ *   </div>
  */
 
 $columns = $columns ?? [];
+$actions = $actions ?? [];
 ?>
 
 <!-- Loading skeleton -->
@@ -47,7 +60,12 @@ $columns = $columns ?? [];
             <?= esc($col['label'] ?? '') ?>
           </th>
         <?php endforeach ?>
-        <!-- Slot for action column — pages may add <th> elements here via JS / template literals -->
+        <?php if (!empty($actions)): ?>
+          <th scope="col"
+              class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+            Aksi
+          </th>
+        <?php endif ?>
       </tr>
     </thead>
 
@@ -59,6 +77,20 @@ $columns = $columns ?? [];
                 x-text="row['<?= esc($col['key']) ?>'] ?? '-'">
             </td>
           <?php endforeach ?>
+          <?php if (!empty($actions)): ?>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <?php $i = 0; $total = count($actions); ?>
+              <?php foreach ($actions as $action): ?>
+                <a :href="<?= $action['url'] ?>"
+                   class="<?= esc($action['class'] ?? 'text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900') ?>">
+                  <?= esc($action['label']) ?>
+                </a>
+                <?php if (++$i < $total): ?>
+                  <span class="mx-2 text-gray-300">|</span>
+                <?php endif ?>
+              <?php endforeach ?>
+            </td>
+          <?php endif ?>
         </tr>
       </template>
     </tbody>
