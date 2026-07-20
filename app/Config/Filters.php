@@ -39,6 +39,7 @@ class Filters extends BaseFilters
         'authFilter'     => \App\Filters\AuthFilter::class,
         'apiKeyFilter'   => \App\Filters\ApiKeyFilter::class,
         'jsonBodyFilter' => \App\Filters\JsonBodyFilter::class,
+        'ssoFilter'      => \App\Filters\SSOFilter::class,
     ];
 
     /**
