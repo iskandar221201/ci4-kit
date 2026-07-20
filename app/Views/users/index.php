@@ -10,7 +10,7 @@
         <?= $this->include('_partials/search_bar', ['placeholder' => 'Cari nama atau email...']) ?>
     </div>
 
-    <?= $this->include('_partials/datatable', [
+    <?php $this->setData([
         'columns' => [
             ['key' => 'username', 'label' => 'Nama'],
             ['key' => 'email', 'label' => 'Email'],
@@ -18,7 +18,8 @@
         'actions' => [
             ['label' => 'Detail', 'url' => "'/users/' + row.id"],
         ],
-    ]) ?>
+    ], 'raw') ?>
+    <?= $this->include('_partials/datatable') ?>
 
 </div>
 <?= $this->endSection() ?>
