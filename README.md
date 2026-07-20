@@ -26,6 +26,7 @@ A production-ready CodeIgniter 4 starter kit with structured API responses, Shie
 - [Audit Trail](#audit-trail)
 - [SSO Layer](#sso-layer)
 - [PDF Export](#pdf-export)
+- [TUS Chunked Upload](#tus-chunked-upload)
 - [Compatibility Matrix](#compatibility-matrix)
 - [How to Add a New Resource](#how-to-add-a-new-resource)
 - [Server Requirements](#server-requirements)
@@ -100,6 +101,7 @@ Request → Filter Stack → Controller → Service → Model → Database
 |---|---|---|
 | **SSO Layer** | `SSOConfig`, `JWTService`, `SSOFilter` | JWT RS256 auth for cross-app requests. Disabled by default (`SSO_ENABLED=false`). |
 | **PDF Export** | `BasePdfExporter` | Abstract base for mPDF-based PDF generation. Extend per module. |
+| **TUS Chunked Upload** | `TusConfig`, `TusUploader`, `TusController`, `TusCleanupCommand` | TUS protocol-based resumable uploads for large files. Requires `composer require ankitpokhrel/tus-php`. |
 
 ### Lifecycle Hooks
 
@@ -125,13 +127,15 @@ app/
 │       ├── AppConstants.php      # HTTP status codes, pagination caps, and app-wide constants
 │   ├── Filters.php           # Filter aliases and route bindings
 │   ├── Routes.php            # Route definitions (web + API)
-│   └── SSOConfig.php         # SSO toggle + RSA key config (v2.0)
+│   ├── SSOConfig.php         # SSO toggle + RSA key config (v2.0)
+│   └── TusConfig.php         # TUS upload dir, max size, expiry (v3.0)
 ├── Controllers/
 │   ├── BaseController.php    # Base for all controllers (traits wired here)
 │   ├── Api/
 │   │   ├── BaseApiController.php   # Forces JSON response, populates $apiUser
 │   │   ├── AuthController.php      # Token-based login endpoint
 │   │   ├── PingController.php      # Health check endpoints
+│   │   ├── TusController.php       # TUS protocol handler (v3.0)
 │   │   └── UserController.php      # Full CRUD reference implementation
 │   └── Web/
 │       ├── DashboardController.php # Serves dashboard view
@@ -147,6 +151,8 @@ app/
 │   └── SSOFilter.php         # JWT Bearer token verification for SSO (v2.0)
 ├── Helpers/
 │   └── response_helper.php   # api_success() / api_error() for filter context
+├── Commands/
+│   └── TusCleanupCommand.php  # php spark tus:cleanup — removes expired TUS uploads (v3.0)
 ├── Contracts/
 │   └── StorageDriverInterface.php  # Abstraction for pluggable storage backends
 ├── Libraries/
@@ -154,6 +160,7 @@ app/
 │   ├── BasePdfExporter.php        # Abstract base for PDF export via mPDF (v2.0)
 │   ├── FileUploader.php           # Standardized upload handler for module files
 │   ├── JWTService.php             # JWT RS256 sign and verify (v2.0)
+│   ├── TusUploader.php            # TUS protocol server wrapper + cleanup (v3.0)
 │   ├── VoidExceptionHandler.php   # Prevents double-response on API error routes
 │   └── Storage/
 │       ├── LocalDriver.php   # Default local filesystem storage driver
@@ -207,10 +214,11 @@ public/assets/js/
 ├── auth.js        # Token + username storage (localStorage), auth guard
 ├── api.js         # Fetch wrapper — attaches Bearer token, unwraps envelope
 ├── error.js       # Global errorHandler toast driver
-└── components.js  # Alpine component definitions (dataTable, formHandler, etc.)
+├── components.js  # Alpine component definitions (dataTable, formHandler, etc.)
+└── tus-client.js  # Optional TUS chunked upload helper (require per-view, v3.0)
 ```
 
-> Files marked `(v2.0)` are additive. Projects using v1.x are unaffected.
+> Files marked `(v2.0)` or `(v3.0)` are additive. Projects using earlier versions are unaffected.
 
 ---
 
@@ -264,8 +272,8 @@ Request → CorsFilter → JsonBodyFilter → ApiKeyFilter / SSOFilter / AuthFil
 
 | Filter | Applied To | Purpose |
 |---|---|---|
-| `CorsFilter` | `api/*` (before + after) | Injects CORS headers; handles OPTIONS preflight with `204` |
-| `JsonBodyFilter` | `api/*` (before) | Rejects POST/PUT/PATCH without `Content-Type: application/json` |
+| `CorsFilter` | `api/*` (before + after) | Injects CORS headers; handles OPTIONS preflight with `204`; passes TUS OPTIONS through to controller |
+| `JsonBodyFilter` | `api/*` (before) | Rejects POST/PUT/PATCH without `Content-Type: application/json`; skips `api/upload/tus` routes |
 | `ApiKeyFilter` | `api/*` protected group | Validates Bearer token via Shield AccessTokens |
 | `SSOFilter` | `api/*` protected group (opt-in) | Verifies JWT Bearer token via RS256. Pass-through when `SSO_ENABLED=false`. |
 | `AuthFilter` | web routes | Checks session login; redirects to `/login` if missing |
@@ -462,7 +470,11 @@ Every log entry is a structured JSON line written to `writable/logs/`:
 
 ## File Uploads
 
-The kit includes a reusable uploader service in [app/Libraries/FileUploader.php](app/Libraries/FileUploader.php) for handling module uploads consistently.
+The kit provides two upload mechanisms: a simple single-request handler and a TUS protocol-based chunked uploader for large files.
+
+### Single-Request Upload — `FileUploader`
+
+[app/Libraries/FileUploader.php](app/Libraries/FileUploader.php) handles module uploads in a single request.
 
 It supports:
 - configurable max size and allowed extensions
@@ -491,6 +503,69 @@ $uploader = new \App\Libraries\FileUploader([], new \App\Libraries\Storage\S3Dri
 ```
 
 > S3 uploads are retried up to 3 times with exponential backoff (100ms/200ms/400ms) on transient failures. CURL errors and HTTP 5xx are retried; 4xx are not.
+
+### Chunked/Resumable Upload — TUS Protocol
+
+For large files that exceed PHP's `upload_max_filesize` or `post_max_size`, the kit provides an optional TUS protocol layer. TUS splits files into chunks and uploads them via multiple `PATCH` requests, allowing pause and resume.
+
+**Requires one-time setup:**
+
+```bash
+composer require ankitpokhrel/tus-php
+```
+
+**Files involved:**
+
+| File | Purpose |
+|---|---|
+| `app/Config/TusConfig.php` | Config — upload dir, max size (default 1 GB), expiry |
+| `app/Libraries/TusUploader.php` | Implements `StorageDriverInterface`, wraps tus-php server |
+| `app/Controllers/Api/TusController.php` | TUS protocol handler at `/api/upload/tus` |
+| `app/Commands/TusCleanupCommand.php` | `php spark tus:cleanup` — remove expired incomplete uploads |
+| `public/assets/js/tus-client.js` | Optional Alpine-compatible JS client |
+
+**TUS Endpoints:**
+
+| Method | Path | Behavior |
+|---|---|---|
+| `OPTIONS` | `/api/upload/tus` | Capability discovery (`Tus-Resumable`, `Tus-Version`) |
+| `POST` | `/api/upload/tus` | Create upload, returns `Location` header |
+| `HEAD` | `/api/upload/tus/{id}` | Get current upload offset |
+| `PATCH` | `/api/upload/tus/{id}` | Upload a chunk |
+| `DELETE` | `/api/upload/tus/{id}` | Cancel upload |
+
+**Env config (in `.env`):**
+
+```
+TUS_UPLOAD_DIR=writable/uploads/tus
+TUS_MAX_SIZE=1073741824
+TUS_EXPIRY_HOURS=24
+```
+
+**Cleanup expired uploads (cron):**
+
+```bash
+php spark tus:cleanup
+```
+
+**JS client usage in a view:**
+
+```php
+<script src="https://cdn.jsdelivr.net/npm/tus-js-client@latest/dist/tus.min.js"></script>
+<script src="<?= base_url('assets/js/tus-client.js') ?>"></script>
+
+<div x-data="tusUploader({ endpoint: '/api/upload/tus', onSuccess: (url) => console.log(url) })">
+  <input type="file" @change="start($event.target.files[0])">
+  <template x-if="isUploading">
+    <progress :value="progress" max="100"></progress>
+  </template>
+  <template x-if="isComplete">
+    <a :href="result" x-text="result"></a>
+  </template>
+</div>
+```
+
+All TUS endpoints are behind `apiKeyFilter` (Bearer token auth). The JS client reads the token from `auth.js` automatically.
 
 ---
 
@@ -706,7 +781,7 @@ public function exportPdf(): ResponseInterface
 v3.0 is a **strict superset** of v2.x. No database migrations required to upgrade.
 
 | Feature | v1.x | v2.0 | v3.0 |
-|---|---|---|---|
+|---|---|---|---|---|
 | BE Layer (API, Service, Model) | ✅ | ✅ | ✅ |
 | Shield Auth (token-based) | ✅ | ✅ | ✅ |
 | Audit Trail | ✅ | ✅ | ✅ |
@@ -715,6 +790,7 @@ v3.0 is a **strict superset** of v2.x. No database migrations required to upgrad
 | Transformers | ✅ | ✅ | ✅ |
 | SSO Layer (JWT RS256) | ❌ | ✅ optional | ✅ optional |
 | PDF Export (mPDF) | ❌ | ✅ optional | ✅ optional |
+| **TUS Chunked Upload** | ❌ | ❌ | ✅ optional |
 | **Web UI Layer** | ❌ | ❌ | ✅ |
 | **Token-based login (no session)** | ❌ | ❌ | ✅ |
 | **APP_NAME env binding** | ❌ | ❌ | ✅ |

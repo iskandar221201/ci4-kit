@@ -47,6 +47,10 @@ $routes->group('api', ['filter' => 'apiKeyFilter'], static function (RouteCollec
     $routes->get('users/(:num)', 'Api\UserController::show/$1');
     $routes->put('users/(:num)', 'Api\UserController::update/$1');
     $routes->delete('users/(:num)', 'Api\UserController::delete/$1');
+
+    // TUS chunked upload
+    $routes->match(['options', 'post'], 'upload/tus', 'Api\TusController::handle');
+    $routes->match(['options', 'post', 'patch', 'head', 'delete'], 'upload/tus/(:any)', 'Api\TusController::handle/$1');
 });
 
 $routes->group('', static function ($routes) {
