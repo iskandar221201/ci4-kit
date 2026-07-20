@@ -51,9 +51,10 @@ class AuthController extends BaseApiController
         $ssoConfig = config('SSOConfig');
         if ($ssoConfig && $ssoConfig->enabled && !empty($ssoConfig->privateKey)) {
             $token = (new JWTService())->sign([
-                'user_id' => $user->id,
-                'email'   => $user->email,
-                'roles'   => $user->getGroups(),
+                'sub'      => (string) $user->id,
+                'user_id'  => $user->id,
+                'email'    => $user->email,
+                'roles'    => $user->getGroups(),
             ]);
             return $this->success(['token' => $token], 'Login berhasil');
         }

@@ -60,13 +60,13 @@ class JWTService
     }
 
     /**
-     * Verify a JWT string and return the decoded payload as an array.
+     * Verify a JWT string and return the decoded payload as an object.
      * Used by Resource Server (SSOFilter).
      *
      * @throws \RuntimeException if public key is not configured, token is invalid,
      *                           expired, signature fails, or required claim is missing.
      */
-    public function verify(string $token): array
+    public function verify(string $token): object
     {
         if ($this->config->publicKey === '') {
             throw new \RuntimeException('SSO public key is not configured');
@@ -84,6 +84,6 @@ class JWTService
             throw new \RuntimeException('Token missing required claim: sub');
         }
 
-        return $payload;
+        return (object) $payload;
     }
 }
