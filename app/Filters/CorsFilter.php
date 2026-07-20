@@ -16,6 +16,12 @@ class CorsFilter implements FilterInterface
         $this->setCorsHeaders($response);
 
         if (strtoupper($request->getMethod()) === 'OPTIONS') {
+            if (str_starts_with($request->getPath(), 'api/upload/tus')) {
+                $response->setHeader('Tus-Resumable', '1.0.0');
+                $response->setHeader('Tus-Version', '1.0.0');
+                $response->setHeader('Tus-Extension', 'creation,termination,checksum,expiration');
+            }
+
             return $response->setStatusCode(204)->setBody('');
         }
 

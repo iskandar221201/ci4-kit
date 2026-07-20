@@ -31,6 +31,11 @@ class JsonBodyFilter implements FilterInterface
             return null;
         }
 
+        // Skip TUS upload routes — they use application/offset+octet-stream
+        if (str_starts_with($request->getPath(), 'api/upload/tus')) {
+            return null;
+        }
+
         $contentType = $request->getHeaderLine('Content-Type');
 
         if (! str_contains($contentType, 'application/json')) {
