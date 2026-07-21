@@ -285,17 +285,35 @@ CODE; ?>
       <code class="text-gray-800 bg-gray-100 px-1 rounded">$fields</code> (array of ['label', 'value']).
     </p>
 
-    <?= $this->include('_partials/detail_card', [
-        'title'  => 'Informasi Pengguna',
-        'fields' => [
-            ['label' => 'Nama',           'value' => 'John Doe'],
-            ['label' => 'Email',          'value' => 'john@example.com'],
-            ['label' => 'Telepon',        'value' => '+62 812 3456 7890'],
-            ['label' => 'Role',           'value' => 'Administrator'],
-            ['label' => 'Tanggal Lahir',  'value' => '17 Agustus 1990'],
-            ['label' => 'Catatan',        'value' => null],
-        ],
-    ]) ?>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-900">Informasi Pengguna</h2>
+      </div>
+      <dl class="divide-y divide-gray-100">
+        <?php
+        $detailFields = [
+          ['label' => 'Nama',          'value' => 'John Doe'],
+          ['label' => 'Email',         'value' => 'john@example.com'],
+          ['label' => 'Telepon',       'value' => '+62 812 3456 7890'],
+          ['label' => 'Role',          'value' => 'Administrator'],
+          ['label' => 'Tanggal Lahir', 'value' => '17 Agustus 1990'],
+          ['label' => 'Catatan',       'value' => null],
+        ];
+        ?>
+        <?php foreach ($detailFields as $df): ?>
+        <div class="px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <dt class="text-sm font-medium text-gray-500 flex items-start"><?= esc($df['label']) ?></dt>
+          <dd class="text-sm text-gray-900 col-span-1 sm:col-span-2 break-words">
+            <?php if ($df['value'] === null || $df['value'] === ''): ?>
+              <span class="text-gray-400 italic">—</span>
+            <?php else: ?>
+              <?= esc((string) $df['value']) ?>
+            <?php endif ?>
+          </dd>
+        </div>
+        <?php endforeach ?>
+      </dl>
+    </div>
 
     <?php $detailCode = <<<'CODE'
 <?= $this->include('_partials/detail_card', [
