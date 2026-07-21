@@ -13,7 +13,23 @@
 </head>
 <body class="bg-gray-50 antialiased">
 
-  <div class="flex min-h-screen">
+  <div class="flex min-h-screen"
+       x-data="sidebarStore()"
+       @keydown.window.escape="close()"
+       @toggle-sidebar.window="toggle()">
+
+    <!-- Backdrop overlay for mobile sidebar -->
+    <div x-show="sidebarOpen"
+         @click="close()"
+         x-transition:enter="ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-30 bg-black/50 lg:hidden"
+         aria-hidden="true">
+    </div>
 
     <!-- Sidebar -->
     <?= $this->include('_partials/sidebar') ?>

@@ -4,8 +4,9 @@
 
   <!-- Left: page context (placeholder — override per page if needed) -->
   <div class="flex items-center gap-2">
-    <!-- Mobile menu toggle (nice-to-have, wired but no JS at layout level) -->
+    <!-- Mobile menu toggle -->
     <button type="button"
+            @click="$dispatch('toggle-sidebar')"
             class="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Open navigation menu">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">

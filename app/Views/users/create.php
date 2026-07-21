@@ -34,14 +34,7 @@
                 <span x-show="errors.password" x-text="errors.password" class="mt-1 text-xs text-red-600 block"></span>
             </div>
 
-            <div class="flex items-center gap-3 pt-1">
-                <button type="submit" :disabled="isSubmitting"
-                    class="px-5 py-2.5 text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span x-show="isSubmitting">Menyimpan...</span>
-                    <span x-show="!isSubmitting">Simpan</span>
-                </button>
-                <a href="/users" class="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Batal</a>
-            </div>
+            <?= $this->include('_partials/submit_group', ['cancelUrl' => '/users']) ?>
         </div>
     </form>
 </div>

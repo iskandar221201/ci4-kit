@@ -25,13 +25,13 @@ $fields = $fields ?? [];
   <!-- Label-value grid -->
   <dl class="divide-y divide-gray-100">
     <?php foreach ($fields as $field): ?>
-      <div class="px-6 py-4 grid grid-cols-3 gap-4">
+      <div class="px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         <dt class="text-sm font-medium text-gray-500 flex items-start">
           <?= esc($field['label'] ?? '') ?>
         </dt>
 
-        <dd class="text-sm text-gray-900 col-span-2 break-words">
+        <dd class="text-sm text-gray-900 col-span-1 sm:col-span-2 break-words">
           <?php
           $value = $field['value'] ?? null;
           if ($value === null || $value === '') {

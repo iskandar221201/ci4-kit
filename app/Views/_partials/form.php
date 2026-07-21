@@ -32,7 +32,7 @@ $redirectJs  = $redirectUrl !== null ? "'" . esc($redirectUrl, 'js') . "'" : 'nu
   </template>
 
   <!-- Submit button -->
-  <div class="mt-6 flex items-center gap-3">
+  <div class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
     <button type="submit"
             :disabled="isSubmitting"
             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed transition-colors">

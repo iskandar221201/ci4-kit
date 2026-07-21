@@ -11,7 +11,7 @@
 ?>
 <div class="mb-6">
 
-  <div class="flex items-start justify-between gap-4">
+  <div class="flex flex-col lg:flex-row items-start justify-between gap-4">
 
     <!-- Page title -->
     <div>

@@ -155,6 +155,23 @@ async function exportPdf(endpoint, params = {}) {
 }
 
 /**
+ * sidebarStore()
+ * Manages mobile sidebar open/close state.
+ * Used by _layouts/main.php and _partials/sidebar.php, _partials/navbar.php
+ */
+function sidebarStore() {
+  return {
+    sidebarOpen: false,
+    toggle() {
+      this.sidebarOpen = !this.sidebarOpen
+    },
+    close() {
+      this.sidebarOpen = false
+    },
+  }
+}
+
+/**
  * detailFetcher(endpoint)
  * Fetches specific data for detail page.
  */

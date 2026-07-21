@@ -79,16 +79,14 @@ $actions = $actions ?? [];
           <?php endforeach ?>
           <?php if (!empty($actions)): ?>
             <td class="px-4 py-3 whitespace-nowrap">
-              <?php $i = 0; $total = count($actions); ?>
+              <span class="inline-flex items-center gap-3">
               <?php foreach ($actions as $action): ?>
                 <a :href="<?= $action['url'] ?>"
                    class="<?= esc($action['class'] ?? 'text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900') ?>">
                   <?= esc($action['label']) ?>
                 </a>
-                <?php if (++$i < $total): ?>
-                  <span class="mx-2 text-gray-300">|</span>
-                <?php endif ?>
               <?php endforeach ?>
+              </span>
             </td>
           <?php endif ?>
         </tr>

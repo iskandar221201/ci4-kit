@@ -24,7 +24,7 @@
        'bg-yellow-500': type === 'warning',
        'bg-gray-800':   type === 'info'
      }"
-     class="fixed bottom-4 right-4 z-50 flex items-center gap-3 text-white px-4 py-3 rounded-lg shadow-lg max-w-sm w-full"
+     class="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex items-center gap-3 text-white px-4 py-3 rounded-lg shadow-lg max-w-sm w-full"
      role="alert"
      aria-live="assertive"
      aria-atomic="true">

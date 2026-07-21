@@ -60,7 +60,7 @@
     </p>
 
     <!-- Action buttons -->
-    <div class="flex items-center justify-center gap-3">
+    <div class="flex flex-col-reverse sm:flex-row items-center justify-center gap-3">
 
       <!-- Cancel -->
       <button type="button"

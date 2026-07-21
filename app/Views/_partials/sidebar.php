@@ -10,7 +10,8 @@ $isActive = function (string $path) use ($currentPath): string {
         : 'text-gray-300 hover:bg-gray-700 hover:text-white';
 };
 ?>
-<aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col">
+<aside class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto lg:flex-shrink-0 lg:min-h-screen"
+       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
 
   <!-- Logo / App Name -->
   <div class="flex items-center h-16 px-6 border-b border-gray-200">
